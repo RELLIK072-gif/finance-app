@@ -1,15 +1,15 @@
 {
-  "name": "Mon Budget Premium",
-  "short_name": "Budget",
+  "name": "MiKajy",
+  "short_name": "MiKajy",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#F9FAFB",
   "theme_color": "#111827",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+      "src": "/mikajy-logo.svg",
       "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     }
   ]
