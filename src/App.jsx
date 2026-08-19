@@ -234,16 +234,10 @@ function App() {
       )}
 
       {/* HEADER CORRIGÉ */}
-      {/* HEADER CORRIGÉ AVEC LOGO MIKAJY */}
       <header className="luxury-header">
         <div className="header-titles">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '5px' }}>
-            <img src="/mikajy-logo.svg" alt="Logo MiKajy" style={{ width: '32px', height: '32px', borderRadius: '8px' }} />
-            <h1 className="title-luxe" style={{ margin: 0 }}>MiKajy.</h1>
-          </div>
-          <span className="profile-badge" style={{ marginLeft: '44px' }}>
-            {vueTendances ? "Tendances" : "Aperçu"} — {profil.prenom}
-          </span>
+          <h1 className="title-luxe">{vueTendances ? "Tendances." : "Aperçu."}</h1>
+          <span className="profile-badge">{profil.prenom} — {profil.profession}</span>
         </div>
         <div className="header-actions">
           <button className="text-button" onClick={() => setVueTendances(!vueTendances)} style={{color: 'var(--text-main)'}}>
