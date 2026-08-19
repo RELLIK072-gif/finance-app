@@ -56,6 +56,17 @@ const EnveloppeCard = ({ enveloppe, depenses, onAddDepense, onDelete }) => {
 };
 
 function App() {
+  // --- GESTION DU SPLASH SCREEN (Écran de démarrage) ---
+  const [showSplash, setShowSplash] = useState(true);
+  const [fadeSplash, setFadeSplash] = useState(false);
+
+  useEffect(() => {
+    const timer1 = setTimeout(() => setFadeSplash(true), 2000);
+    const timer2 = setTimeout(() => setShowSplash(false), 2500);
+    return () => { clearTimeout(timer1); clearTimeout(timer2); };
+  }, []);
+  // -----------------------------------------------------
+
   const [etape, setEtape] = useState(() => parseInt(localStorage.getItem('mon_etape')) || 1);
   const [profil, setProfil] = useState(() => {
     const saved = localStorage.getItem('mon_profil');
@@ -145,6 +156,16 @@ function App() {
     setShowRapport(false); setShowDetailsRapport(false);
   };
 
+  // --- AFFICHAGE DU SPLASH SCREEN ---
+  if (showSplash) {
+    return (
+      <div className={`splash-screen ${fadeSplash ? 'splash-fade-out' : ''}`}>
+        <img src="/mikajy-logo.svg" alt="Logo MiKajy" className="splash-logo" />
+        <h2 className="splash-title">MiKajy.</h2>
+      </div>
+    );
+  }
+
   if (etape === 1) {
     return (
       <div className="app-container onboarding animate-page-transition">
@@ -233,19 +254,22 @@ function App() {
         </div>
       )}
 
-      {/* HEADER CORRIGÉ */}
+      {/* HEADER CORRIGÉ AVEC LOGO MIKAJY */}
       <header className="luxury-header">
         <div className="header-titles">
-          <h1 className="title-luxe">{vueTendances ? "Tendances." : "Aperçu."}</h1>
-          <span className="profile-badge">{profil.prenom} — {profil.profession}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '5px' }}>
+            <img src="/mikajy-logo.svg" alt="Logo MiKajy" style={{ width: '32px', height: '32px', borderRadius: '8px' }} />
+            <h1 className="title-luxe" style={{ margin: 0 }}>MiKajy.</h1>
+          </div>
+          <span className="profile-badge" style={{ marginLeft: '44px' }}>
+            {vueTendances ? "Tendances" : "Aperçu"} — {profil.prenom}
+          </span>
         </div>
         <div className="header-actions">
-          <button className="text-button" onClick={() => setVueTendances(!vueTendances)} style={{color: 'var(--text-main)'}}>
-            {vueTendances ? "Budget" : "Tendances"}
+          <button className="text-button" onClick={() => setVueTendances(!vueTendances)} style={{color: 'var(--text-main)', fontWeight: '600'}}>
+            {vueTendances ? "⬅️ Budget" : "📊 Tendances"}
           </button>
-          <button className="text-button" onClick={() => setShowRapport(true)} style={{color: '#3498db'}}>
-            Fin de mois
-          </button>
+          <button className="text-button" onClick={() => setShowRapport(true)} style={{color: '#3498db', fontWeight: '600'}}>Fin Mois</button>
         </div>
       </header>
       
