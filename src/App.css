@@ -92,14 +92,34 @@ body {
 .section-title { font-size: 14px; font-weight: 600; margin: 15px 0 5px 0; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
 .action-area { display: flex; flex-direction: column; gap: 12px; margin-bottom: 30px; }
 
-.luxury-input {
-  width: 100%; padding: 16px 15px; background: transparent;
-  border: 1px solid var(--border-color); border-radius: 8px;
-  font-size: 15px; font-family: 'Inter', sans-serif; transition: var(--transition-speed);
-  box-sizing: border-box; outline: none;
+.luxury-input, .mini-input {
+  color: #111827 !important;
+  background-color: #FFFFFF !important;
+  -webkit-text-fill-color: #111827 !important;
 }
-.luxury-input:focus { border-color: var(--accent-color); background: var(--card-bg); box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
 
+.luxury-input {
+  width: 100%; 
+  padding: 16px 15px; 
+  border: 1px solid var(--border-color); 
+  border-radius: 8px;
+  font-size: 15px; 
+  font-family: 'Inter', sans-serif; 
+  transition: var(--transition-speed);
+  box-sizing: border-box; 
+  outline: none;
+}
+
+.luxury-input:focus { 
+  border-color: var(--accent-color); 
+  background-color: #FFFFFF !important; 
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03); 
+}
+
+.luxury-input::placeholder, .mini-input::placeholder {
+  color: #9CA3AF !important;
+  opacity: 1;
+}
 /* Boutons Premium */
 .luxury-button {
   width: 100%; background-color: var(--accent-color); color: white;
