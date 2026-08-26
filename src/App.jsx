@@ -56,16 +56,48 @@ const EnveloppeCard = ({ enveloppe, depenses, onAddDepense, onDelete }) => {
 };
 
 function App() {
-  // --- GESTION DU SPLASH SCREEN (Écran de démarrage) ---
   const [showSplash, setShowSplash] = useState(true);
   const [fadeSplash, setFadeSplash] = useState(false);
+
+  // --- NOUVEAU : GESTION DU THEME SOMBRE ---
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem('mikajy_theme');
+    if (saved) return saved;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('mikajy_theme', theme);
+  }, [theme]);
+
+  // --- NOUVEAU : NOTIFICATIONS FIN DE MOIS ---
+  useEffect(() => {
+    if ("Notification" in window) {
+      if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+        Notification.requestPermission();
+      }
+      
+      const today = new Date();
+      // Si on est le 28 ou plus, on envoie un rappel pour clôturer
+      if (today.getDate() >= 28 && Notification.permission === "granted") {
+        const lastNotif = localStorage.getItem('last_notif_date');
+        if (lastNotif !== today.toDateString()) {
+          new Notification("MiKajy - Fin de mois", {
+            body: "N'oublie pas d'enregistrer tes dernières dépenses et de clôturer ton mois !",
+            icon: "/mikajy-logo.svg"
+          });
+          localStorage.setItem('last_notif_date', today.toDateString());
+        }
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const timer1 = setTimeout(() => setFadeSplash(true), 2000);
     const timer2 = setTimeout(() => setShowSplash(false), 2500);
     return () => { clearTimeout(timer1); clearTimeout(timer2); };
   }, []);
-  // -----------------------------------------------------
 
   const [etape, setEtape] = useState(() => parseInt(localStorage.getItem('mon_etape')) || 1);
   const [profil, setProfil] = useState(() => {
@@ -74,7 +106,6 @@ function App() {
   });
   const [enveloppes, setEnveloppes] = useState(() => JSON.parse(localStorage.getItem('mes_enveloppes')) || []);
   const [depenses, setDepenses] = useState(() => JSON.parse(localStorage.getItem('mes_depenses')) || []);
-  
   const [epargnePrecedente, setEpargnePrecedente] = useState(() => parseFloat(localStorage.getItem('mon_epargne_prec')) || 0);
   const [archives, setArchives] = useState(() => JSON.parse(localStorage.getItem('mes_archives')) || []);
   const [moisEnregistre, setMoisEnregistre] = useState(() => {
@@ -110,7 +141,6 @@ function App() {
   const totalDepensesGlobal = depenses.reduce((acc, d) => acc + d.montant, 0);
   const epargneRestante = revenuTotal - totalDepensesGlobal;
   const pourcentageGlobal = revenuTotal > 0 ? (totalDepensesGlobal / revenuTotal) * 100 : 0;
-
   const toutesEnveloppes = [...enveloppes, { id: 'imprevus', nom: 'Imprévus', alloue: resteAAllouer }];
 
   const validerProfil = () => { if (profil.prenom && profil.salaire) setEtape(2); else alert("Prénom et salaire requis."); };
@@ -138,25 +168,34 @@ function App() {
 
   const cloturerMois = () => {
     const nomMois = new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-    const nouvelleArchive = {
-      id: Date.now().toString(),
-      mois: nomMois,
-      revenus: revenuTotal,
-      depenses: totalDepensesGlobal,
-      epargne: epargneRestante
-    };
-    
-    setArchives([...archives, nouvelleArchive]);
+    setArchives([...archives, { id: Date.now().toString(), mois: nomMois, revenus: revenuTotal, depenses: totalDepensesGlobal, epargne: epargneRestante }]);
     setEpargnePrecedente(epargneRestante > 0 ? epargneRestante : 0); 
-    
     setEnveloppes([]); setDepenses([]);
     setProfil({ ...profil, salaire: '', autres: '' }); 
-    setEtape(1);
-    setMoisEnregistre(new Date().getMonth());
+    setEtape(1); setMoisEnregistre(new Date().getMonth());
     setShowRapport(false); setShowDetailsRapport(false);
   };
 
-  // --- AFFICHAGE DU SPLASH SCREEN ---
+  // --- NOUVEAU : FONCTION EXPORT CSV ---
+  const exporterCSV = () => {
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Date,Description,Montant (Ar)\n";
+    depenses.forEach(d => {
+      csvContent += `"${d.date}","${d.nom}",${d.montant}\n`;
+    });
+    csvContent += `\nRevenus du mois,,,${revenuTotal}\n`;
+    csvContent += `Total Depense,,,${totalDepensesGlobal}\n`;
+    csvContent += `Epargne restante,,,${epargneRestante}\n`;
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `MiKajy_Bilan_${new Date().toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (showSplash) {
     return (
       <div className={`splash-screen ${fadeSplash ? 'splash-fade-out' : ''}`}>
@@ -171,13 +210,9 @@ function App() {
       <div className="app-container onboarding animate-page-transition">
         <h1 className="title-luxe">Nouveau mois.</h1>
         <p className="subtitle">Entrons tes revenus pour cette nouvelle période.</p>
-        
         {epargnePrecedente > 0 && (
-          <div className="rollover-badge">
-            ✨ Solde du mois dernier reporté : <strong>+ {epargnePrecedente.toLocaleString('fr-FR')} Ar</strong>
-          </div>
+          <div className="rollover-badge">✨ Solde du mois dernier reporté : <strong>+ {epargnePrecedente.toLocaleString('fr-FR')} Ar</strong></div>
         )}
-
         <div className="form-group">
           <input type="text" placeholder="Prénom" value={profil.prenom} onChange={e => setProfil({...profil, prenom: e.target.value})} className="luxury-input" />
           <input type="text" placeholder="Profession" value={profil.profession} onChange={e => setProfil({...profil, profession: e.target.value})} className="luxury-input" />
@@ -194,7 +229,7 @@ function App() {
     return (
       <div className="app-container onboarding animate-page-transition">
         <h1 className="title-luxe">Allocation.</h1>
-        <p className="subtitle">Tu disposes de {revenuTotal.toLocaleString('fr-FR')} Ar (incluant l'épargne passée).</p>
+        <p className="subtitle">Tu disposes de {revenuTotal.toLocaleString('fr-FR')} Ar.</p>
         <div className="allocation-header">
           <span className="label">Fonds non alloués (Imprévus)</span>
           <div className="amount-reste allocation-total">{resteAAllouer.toLocaleString('fr-FR')} Ar</div>
@@ -224,7 +259,7 @@ function App() {
           <div className="modal-content rapport-modal">
             <h2 className="title-luxe">Rapport Mensuel</h2>
             <p style={{marginBottom: '20px', color: 'var(--text-muted)', fontSize: '14px'}}>
-              Bilan du mois pour <strong>{profil.prenom}</strong>. L'épargne sera transférée aux Imprévus du mois prochain.
+              Bilan du mois pour <strong>{profil.prenom}</strong>.
             </p>
             <div className="report-stats">
               <div className="stat-row"><span className="label">Revenus totaux</span><span className="stat-value">{revenuTotal.toLocaleString('fr-FR')} Ar</span></div>
@@ -232,9 +267,14 @@ function App() {
               <div className="stat-row highlight"><span className="label">Argent Épargné</span><span className="stat-value" style={{color: '#10B981'}}>{epargneRestante.toLocaleString('fr-FR')} Ar</span></div>
             </div>
 
-            <button className="text-button" onClick={() => setShowDetailsRapport(!showDetailsRapport)} style={{width: '100%', marginBottom: '15px', padding: '10px', backgroundColor: 'var(--bg-color)', borderRadius: '8px'}}>
-              {showDetailsRapport ? "▲ Masquer les détails" : "▼ Voir les détails de chaque centime"}
-            </button>
+            <div style={{display: 'flex', gap: '10px', marginBottom: '15px'}}>
+              <button className="text-button" onClick={() => setShowDetailsRapport(!showDetailsRapport)} style={{flex: 1, backgroundColor: 'var(--bg-color)'}}>
+                {showDetailsRapport ? "▲ Masquer" : "▼ Détails"}
+              </button>
+              <button className="text-button" onClick={exporterCSV} style={{flex: 1, backgroundColor: 'var(--bg-color)', color: '#10B981'}}>
+                📥 Exporter (CSV)
+              </button>
+            </div>
 
             {showDetailsRapport && (
               <div className="rapport-details animate-slide-down">
@@ -254,12 +294,15 @@ function App() {
         </div>
       )}
 
-      {/* HEADER CORRIGÉ AVEC LOGO MIKAJY */}
+      {/* HEADER AVEC BOUTON MODE SOMBRE */}
       <header className="luxury-header">
         <div className="header-titles">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '5px' }}>
             <img src="/mikajy-logo.svg" alt="Logo MiKajy" style={{ width: '32px', height: '32px', borderRadius: '8px' }} />
             <h1 className="title-luxe" style={{ margin: 0 }}>MiKajy.</h1>
+            <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} className="theme-toggle" title="Changer le thème">
+              {theme === 'light' ? '🌙' : '☀️'}
+            </button>
           </div>
           <span className="profile-badge" style={{ marginLeft: '44px' }}>
             {vueTendances ? "Tendances" : "Aperçu"} — {profil.prenom}
@@ -312,7 +355,7 @@ function App() {
                 {!showAddForm ? (
                   <button className="text-button dashed-button" onClick={() => setShowAddForm(true)}>+ Ajouter une nouvelle section</button>
                 ) : (
-                  <div className="enveloppe-card animate-fade-in" style={{ borderLeftColor: '#111827' }}>
+                  <div className="enveloppe-card animate-fade-in" style={{ borderLeftColor: 'var(--text-main)' }}>
                     <div className="env-header"><h3>Nouvelle section</h3><span className="env-budget">Max: {resteAAllouer.toLocaleString('fr-FR')} Ar</span></div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
                       <input type="text" placeholder="Intitulé" value={nvNomEnv} onChange={e => setNvNomEnv(e.target.value)} className="luxury-input" style={{ padding: '12px' }} />
