@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
+// --- FONCTION SÉCURISÉE POUR LE STOCKAGE ---
+const safeJSONParse = (key, fallback) => {
+  try {
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : fallback;
+  } catch (e) {
+    return fallback;
+  }
+};
+
 const EnveloppeCard = ({ enveloppe, depenses, onAddDepense, onDelete }) => {
   const [nomItem, setNomItem] = useState('');
   const [montantItem, setMontantItem] = useState('');
@@ -59,11 +69,15 @@ function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [fadeSplash, setFadeSplash] = useState(false);
 
-  // --- NOUVEAU : GESTION DU THEME SOMBRE ---
+  // GESTION DU THEME SOMBRE (Sécurisée)
   const [theme, setTheme] = useState(() => {
-    const saved = localStorage.getItem('mikajy_theme');
-    if (saved) return saved;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    try {
+      const saved = localStorage.getItem('mikajy_theme');
+      if (saved) return saved;
+      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    } catch (e) {
+      return 'light';
+    }
   });
 
   useEffect(() => {
@@ -71,27 +85,38 @@ function App() {
     localStorage.setItem('mikajy_theme', theme);
   }, [theme]);
 
-  // --- NOUVEAU : NOTIFICATIONS FIN DE MOIS ---
+  // VÉRIFICATION DES NOTIFICATIONS (Sans demander la permission pour éviter le crash)
   useEffect(() => {
-    if ("Notification" in window) {
-      if (Notification.permission !== "granted" && Notification.permission !== "denied") {
-        Notification.requestPermission();
-      }
-      
-      const today = new Date();
-      // Si on est le 28 ou plus, on envoie un rappel pour clôturer
-      if (today.getDate() >= 28 && Notification.permission === "granted") {
-        const lastNotif = localStorage.getItem('last_notif_date');
-        if (lastNotif !== today.toDateString()) {
-          new Notification("MiKajy - Fin de mois", {
-            body: "N'oublie pas d'enregistrer tes dernières dépenses et de clôturer ton mois !",
-            icon: "/mikajy-logo.svg"
-          });
-          localStorage.setItem('last_notif_date', today.toDateString());
+    try {
+      if (typeof window !== 'undefined' && "Notification" in window) {
+        const today = new Date();
+        // Envoi du rappel uniquement si la permission a DEJA été donnée
+        if (today.getDate() >= 28 && Notification.permission === "granted") {
+          const lastNotif = localStorage.getItem('last_notif_date');
+          if (lastNotif !== today.toDateString()) {
+            new Notification("MiKajy - Fin de mois", {
+              body: "N'oublie pas d'enregistrer tes dernières dépenses et de clôturer ton mois !",
+              icon: "/mikajy-logo.svg"
+            });
+            localStorage.setItem('last_notif_date', today.toDateString());
+          }
         }
       }
+    } catch (e) {
+      console.error("Notifications bloquées par le navigateur.");
     }
   }, []);
+
+  // Demande officielle de permission (déclenchée par un clic utilisateur)
+  const demanderPermissionNotif = () => {
+    try {
+      if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
+        Notification.requestPermission();
+      }
+    } catch (e) {
+      console.error("Impossible de demander les notifications.");
+    }
+  };
 
   useEffect(() => {
     const timer1 = setTimeout(() => setFadeSplash(true), 2000);
@@ -99,15 +124,13 @@ function App() {
     return () => { clearTimeout(timer1); clearTimeout(timer2); };
   }, []);
 
+  // ÉTATS SÉCURISÉS
   const [etape, setEtape] = useState(() => parseInt(localStorage.getItem('mon_etape')) || 1);
-  const [profil, setProfil] = useState(() => {
-    const saved = localStorage.getItem('mon_profil');
-    return saved ? JSON.parse(saved) : { prenom: '', nom: '', profession: '', salaire: '', autres: '' };
-  });
-  const [enveloppes, setEnveloppes] = useState(() => JSON.parse(localStorage.getItem('mes_enveloppes')) || []);
-  const [depenses, setDepenses] = useState(() => JSON.parse(localStorage.getItem('mes_depenses')) || []);
+  const [profil, setProfil] = useState(() => safeJSONParse('mon_profil', { prenom: '', nom: '', profession: '', salaire: '', autres: '' }));
+  const [enveloppes, setEnveloppes] = useState(() => safeJSONParse('mes_enveloppes', []));
+  const [depenses, setDepenses] = useState(() => safeJSONParse('mes_depenses', []));
   const [epargnePrecedente, setEpargnePrecedente] = useState(() => parseFloat(localStorage.getItem('mon_epargne_prec')) || 0);
-  const [archives, setArchives] = useState(() => JSON.parse(localStorage.getItem('mes_archives')) || []);
+  const [archives, setArchives] = useState(() => safeJSONParse('mes_archives', []));
   const [moisEnregistre, setMoisEnregistre] = useState(() => {
     const saved = localStorage.getItem('mon_mois');
     return saved !== null ? parseInt(saved) : new Date().getMonth();
@@ -144,7 +167,12 @@ function App() {
   const toutesEnveloppes = [...enveloppes, { id: 'imprevus', nom: 'Imprévus', alloue: resteAAllouer }];
 
   const validerProfil = () => { if (profil.prenom && profil.salaire) setEtape(2); else alert("Prénom et salaire requis."); };
-  const validerBudget = () => setEtape(3);
+  
+  // Validation étape 2 : on demande l'accès aux notifications ici !
+  const validerBudget = () => {
+    demanderPermissionNotif();
+    setEtape(3);
+  };
 
   const ajouterEnveloppe = () => {
     const montant = parseFloat(nvMontantEnv);
@@ -176,7 +204,6 @@ function App() {
     setShowRapport(false); setShowDetailsRapport(false);
   };
 
-  // --- NOUVEAU : FONCTION EXPORT CSV ---
   const exporterCSV = () => {
     let csvContent = "data:text/csv;charset=utf-8,";
     csvContent += "Date,Description,Montant (Ar)\n";
@@ -294,7 +321,6 @@ function App() {
         </div>
       )}
 
-      {/* HEADER AVEC BOUTON MODE SOMBRE */}
       <header className="luxury-header">
         <div className="header-titles">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '5px' }}>

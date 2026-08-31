@@ -180,13 +180,14 @@ body {
 /* --- MINI FORMULAIRE --- */
 .env-form { 
   display: flex; 
+  flex-wrap: wrap; /* L'ASTUCE : Permet de passer à la ligne sur petit écran */
   gap: 8px; 
   margin-bottom: 20px; 
   width: 100%; 
 }
 
 .mini-input { 
-  flex: 1; 
+  flex: 1 1 100px; /* S'adapte, mais ne devient jamais plus petit que 100px */
   min-width: 0; 
   padding: 12px 10px; 
   border: 1px solid var(--border-color); 
@@ -201,11 +202,12 @@ body {
 .mini-input:focus { border-color: var(--accent-color); }
 
 .mini-button { 
+  flex: 1 1 100%; /* S'il n'y a plus de place, il prend toute la ligne en dessous */
   background-color: var(--accent-color); 
   color: #fff; 
   border: none; 
   border-radius: 6px; 
-  padding: 0 15px; 
+  padding: 12px 15px; /* Bouton plus grand, plus facile à cliquer ! */
   font-size: 13px; 
   font-weight: 500; 
   cursor: pointer; 
