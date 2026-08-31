@@ -323,7 +323,7 @@ function App() {
                 {showDetailsRapport ? "▲ Masquer" : "▼ Détails"}
               </button>
               <button className="text-button" onClick={exporterCSV} style={{flex: 1, backgroundColor: 'var(--bg-color)', color: '#10B981'}}>
-                📥 Exporter (CSV)
+                  Exporter (CSV)
               </button>
             </div>
 
@@ -360,7 +360,7 @@ function App() {
         </div>
         <div className="header-actions">
           <button className="text-button" onClick={() => setVueTendances(!vueTendances)} style={{color: 'var(--text-main)', fontWeight: '600'}}>
-            {vueTendances ? "⬅️ Budget" : "📊 Tendances"}
+            {vueTendances ? "⬅ Budget" : " Tendances"}
           </button>
           <button className="text-button" onClick={() => setShowRapport(true)} style={{color: '#3498db', fontWeight: '600'}}>Fin Mois</button>
         </div>
