@@ -69,7 +69,7 @@ function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [fadeSplash, setFadeSplash] = useState(false);
 
-  // GESTION DU THEME SOMBRE (Sécurisée)
+  // GESTION DU THEME SOMBRE
   const [theme, setTheme] = useState(() => {
     try {
       const saved = localStorage.getItem('mikajy_theme');
@@ -85,12 +85,11 @@ function App() {
     localStorage.setItem('mikajy_theme', theme);
   }, [theme]);
 
-  // VÉRIFICATION DES NOTIFICATIONS (Sans demander la permission pour éviter le crash)
+  // VÉRIFICATION DES NOTIFICATIONS
   useEffect(() => {
     try {
       if (typeof window !== 'undefined' && "Notification" in window) {
         const today = new Date();
-        // Envoi du rappel uniquement si la permission a DEJA été donnée
         if (today.getDate() >= 28 && Notification.permission === "granted") {
           const lastNotif = localStorage.getItem('last_notif_date');
           if (lastNotif !== today.toDateString()) {
@@ -103,11 +102,10 @@ function App() {
         }
       }
     } catch (e) {
-      console.error("Notifications bloquées par le navigateur.");
+      console.error("Notifications bloquées.");
     }
   }, []);
 
-  // Demande officielle de permission (déclenchée par un clic utilisateur)
   const demanderPermissionNotif = () => {
     try {
       if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
@@ -124,7 +122,7 @@ function App() {
     return () => { clearTimeout(timer1); clearTimeout(timer2); };
   }, []);
 
-  // ÉTATS SÉCURISÉS
+  // ÉTATS
   const [etape, setEtape] = useState(() => parseInt(localStorage.getItem('mon_etape')) || 1);
   const [profil, setProfil] = useState(() => safeJSONParse('mon_profil', { prenom: '', nom: '', profession: '', salaire: '', autres: '' }));
   const [enveloppes, setEnveloppes] = useState(() => safeJSONParse('mes_enveloppes', []));
@@ -135,6 +133,29 @@ function App() {
     const saved = localStorage.getItem('mon_mois');
     return saved !== null ? parseInt(saved) : new Date().getMonth();
   });
+
+  // --- NOUVEAU : CONNEXION AU BOUTON RETOUR DU TÉLÉPHONE ---
+  useEffect(() => {
+    // Initialise l'historique du téléphone avec l'étape actuelle
+    window.history.replaceState({ etape: etape }, '');
+
+    const handleBackButton = (event) => {
+      // Si l'utilisateur appuie sur "Retour", on regarde à quelle étape on doit revenir
+      if (event.state && event.state.etape) {
+        setEtape(event.state.etape);
+      }
+    };
+
+    window.addEventListener('popstate', handleBackButton);
+    return () => window.removeEventListener('popstate', handleBackButton);
+  }, []); // Se lance une seule fois au démarrage
+
+  // Fonction pour changer d'étape et dire au téléphone de le mémoriser
+  const allerAEtape = (nouvelleEtape) => {
+    setEtape(nouvelleEtape);
+    window.history.pushState({ etape: nouvelleEtape }, '');
+  };
+  // ---------------------------------------------------------
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [showRapport, setShowRapport] = useState(false);
@@ -166,12 +187,14 @@ function App() {
   const pourcentageGlobal = revenuTotal > 0 ? (totalDepensesGlobal / revenuTotal) * 100 : 0;
   const toutesEnveloppes = [...enveloppes, { id: 'imprevus', nom: 'Imprévus', alloue: resteAAllouer }];
 
-  const validerProfil = () => { if (profil.prenom && profil.salaire) setEtape(2); else alert("Prénom et salaire requis."); };
+  const validerProfil = () => { 
+    if (profil.prenom && profil.salaire) allerAEtape(2); // Utilise l'historique
+    else alert("Prénom et salaire requis."); 
+  };
   
-  // Validation étape 2 : on demande l'accès aux notifications ici !
   const validerBudget = () => {
     demanderPermissionNotif();
-    setEtape(3);
+    allerAEtape(3); // Utilise l'historique
   };
 
   const ajouterEnveloppe = () => {
@@ -200,8 +223,9 @@ function App() {
     setEpargnePrecedente(epargneRestante > 0 ? epargneRestante : 0); 
     setEnveloppes([]); setDepenses([]);
     setProfil({ ...profil, salaire: '', autres: '' }); 
-    setEtape(1); setMoisEnregistre(new Date().getMonth());
+    setMoisEnregistre(new Date().getMonth());
     setShowRapport(false); setShowDetailsRapport(false);
+    allerAEtape(1); // Utilise l'historique
   };
 
   const exporterCSV = () => {
